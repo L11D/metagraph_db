@@ -480,7 +480,7 @@
             });
 
             const editor = monaco.editor.create(document.getElementById('editor-container'), {
-                value: 'CREATE a:VERT {\n\tname: text = "Alice"\n\tage: int32 = 20,\n\tshool: text? = None\n}\nRETURN a',
+                value: 'CREATE a:VERT {\n\tname: text = "Alice",\n\tage: int32 = 20,\n\tshool: text? = None\n}\nRETURN a',
                 language: langId,
                 theme: isDark ? 'vs-dark' : 'mgql-light',
                 automaticLayout: true, // Helps with basic resize
