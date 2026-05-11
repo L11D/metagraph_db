@@ -2,9 +2,8 @@ FROM clux/muslrust:latest as builder
 LABEL authors="Mr. Liid"
 WORKDIR /app
 
-COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
+COPY Cargo.toml rust-toolchain.toml ./
 COPY crates/parser/Cargo.toml crates/parser/
-COPY crates/parser/Cargo.lock crates/parser/
 
 RUN mkdir src && echo "fn main() {}" > src/main.rs
 RUN mkdir -p crates/parser/src && touch crates/parser/src/lib.rs
