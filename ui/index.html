@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MGQL Console</title>
+    <style>
+        /* CSS Variables for Theming */
+        :root {
+            --bg-body: #f3f4f6;
+            --bg-surface: #ffffff;
+            --bg-subtle: #f9fafb;
+            --border-color: #e5e7eb;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --accent-primary: #2563eb;
+            --accent-hover: #1d4ed8;
+            --status-ok: #10b981;
+            --status-err: #ef4444;
+            --status-idle: #9ca3af;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --resizer-color: transparent;
+            --resizer-hover: #cbd5e1;
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #0d1117;
+            --bg-surface: #161b22;
+            --bg-subtle: #21262d;
+            --border-color: #30363d;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent-primary: #2f81f7;
+            --accent-hover: #1f6feb;
+            --resizer-color: transparent;
+            --resizer-hover: #484f58;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        /* Top Header */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 24px;
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+        }
+
+        .app-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border-color: var(--border-color);
+            color: var(--text-main);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-subtle);
+        }
+
+        .btn-primary {
+            background-color: var(--accent-primary);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        /* Main Workspace */
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Panels */
+        .panel {
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-surface);
+            overflow: hidden;
+        }
+
+        .panel-left {
+            width: 60%; /* Default width */
+            min-width: 300px;
+        }
+
+        .panel-right {
+            flex: 1;
+            min-width: 300px;
+            background-color: var(--bg-subtle);
+        }
+
+        /* Resizer */
+        .resizer {
+            width: 6px;
+            background-color: var(--border-color);
+            cursor: col-resize;
+            position: relative;
+            z-index: 5;
+            transition: background-color 0.2s;
+        }
+
+        .resizer:hover, .resizer.dragging {
+            background-color: var(--accent-primary);
+        }
+
+        /* Toolbar / Inputs */
+        .toolbar {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background-color: var(--bg-surface);
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .input-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .input-control {
+            flex: 1;
+            padding: 6px 12px;
+            font-size: 13px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            transition: border-color 0.2s;
+        }
+
+        .input-control:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        /* Editor Area */
+        .editor-wrapper {
+            flex: 1;
+            position: relative;
+            min-height: 200px;
+        }
+
+        #editor-container {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+        }
+
+        /* Action Bar (Footer of Left Panel) */
+        .action-bar {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-surface);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-muted);
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: var(--bg-body);
+            border: 1px solid var(--border-color);
+        }
+
+        .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .dot-idle { background-color: var(--status-idle); }
+        .dot-ok { background-color: var(--status-ok); box-shadow: 0 0 8px var(--status-ok); }
+        .dot-err { background-color: var(--status-err); box-shadow: 0 0 8px var(--status-err); }
+
+        /* Results Panel */
+        .results-header {
+            padding: 12px 24px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--bg-surface);
+        }
+
+        .results-content {
+            flex: 1;
+            padding: 24px;
+            overflow: auto;
+            position: relative;
+        }
+
+        /* Table Styling */
+        .table-container {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow-x: auto;
+            box-shadow: var(--shadow-sm);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--bg-subtle);
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+            white-space: nowrap;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tbody tr:hover { background-color: var(--bg-subtle); }
+
+        /* States (Loading, Empty, Error) */
+        .state-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            text-align: center;
+            gap: 16px;
+        }
+
+        .state-icon svg {
+            width: 48px;
+            height: 48px;
+            fill: var(--text-muted);
+            opacity: 0.5;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .workspace { flex-direction: column; }
+            .panel-left { width: 100% !important; height: 50%; flex: none; }
+            .panel-right { height: 50%; width: 100%; flex: none; }
+            .resizer { height: 6px; width: 100%; cursor: row-resize; }
+            .action-bar { flex-direction: column; gap: 12px; align-items: stretch; }
+            .btn-primary { width: 100%; justify-content: center; }
+            .status-badge { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="app-header">
+        <div class="app-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+            </svg>
+            MGQL Console
+        </div>
+        <button id="theme-toggle" class="btn btn-outline">
+            <span id="theme-icon">🌙</span> <span id="theme-text">Тёмная тема</span>
+        </button>
+    </header>
+
+    <div class="workspace">
+        
+        <div class="panel panel-left" id="panel-left">
+            <div class="toolbar">
+                <div class="input-group">
+                    <label for="db_name">БД:</label>
+                    <input type="text" id="db_name" class="input-control" placeholder="Например: main_db" value="main_db">
+                </div>
+            </div>
+            
+            <div class="editor-wrapper">
+                <div id="editor-container"></div>
+            </div>
+            
+            <div class="action-bar">
+                <div class="status-badge">
+                    <span id="syntax-dot" class="dot dot-idle"></span>
+                    <span id="syntax-text">Готов к вводу</span>
+                </div>
+                <button id="execute-btn" class="btn btn-primary">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    Выполнить
+                </button>
+            </div>
+        </div>
+
+        <div class="resizer" id="resizer"></div>
+
+        <div class="panel panel-right">
+            <div class="results-header">Результат выполнения</div>
+            <div class="results-content" id="results-content">
+                
+                <div class="state-container">
+                    <div class="state-icon">
+                        <svg viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+                    </div>
+                    <div>
+                        <h3>Нет данных</h3>
+                        <p style="font-size: 13px; margin-top: 4px;">Введите запрос и нажмите "Выполнить", чтобы увидеть результаты.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs/loader.min.js"></script>
+    <script>
+        // === Resizer Logic ===
+        const resizer = document.getElementById('resizer');
+        const leftPanel = document.getElementById('panel-left');
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            resizer.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none'; // Prevent text selection
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            // Prevent panel from getting too small or too large
+            const containerWidth = document.body.clientWidth;
+            let newWidth = (e.clientX / containerWidth) * 100;
+            if (newWidth < 20) newWidth = 20;
+            if (newWidth > 80) newWidth = 80;
+            leftPanel.style.width = `${newWidth}%`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                resizer.classList.remove('dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
+
+        // === Theme Logic ===
+        let isDark = false;
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeText = document.getElementById('theme-text');
+        
+        // Ensure Monaco variable is accessible globally for the theme toggle
+        let globalEditor = null;
+
+        themeToggle.addEventListener('click', () => {
+            isDark = !isDark;
+            document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            themeIcon.textContent = isDark ? '☀️' : '🌙';
+            themeText.textContent = isDark ? 'Светлая тема' : 'Тёмная тема';
+            
+            if (globalEditor) {
+                monaco.editor.setTheme(isDark ? 'vs-dark' : 'mgql-light');
+            }
+        });
+
+        // === Monaco Editor Setup ===
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs' } });
+
+        require(['vs/editor/editor.main'], function () {
+            const langId = 'graphQL'; // Mapping to your MGQL Custom Language
+            
+            monaco.languages.register({ id: langId });
+            monaco.languages.setMonarchTokensProvider(langId, {
+                ignoreCase: true,
+                keywords: ['CREATE', 'META', 'VERT', 'EDGE', 'FIND', 'DELETE', 'WHERE', 'CONSTRAINT', 'ATTRIBUTE', 'RETURN', 'SET', 'IN', 'TO', 'AND', 'OR', 'NOT', 'PARENT', 'UNPARENT'],
+                typeKeywords: ['text', 'int32', 'bool'],
+                tokenizer: {
+                    root: [
+                        [/[a-zA-Z_]\w*/, { cases: { '@keywords': 'keyword', '@typeKeywords': 'type', '@default': 'identifier' } }],
+                        [/[{}()\[\]]/, '@brackets'],
+                        [/-?\d+/, 'number'],
+                        [/"([^"\\]|\\.)*"/, 'string'],
+                        [/[ \t\r\n]+/, 'white'],
+                    ]
+                }
+            });
+
+            // Define custom light theme to match GitHub/modern style
+            monaco.editor.defineTheme('mgql-light', {
+                base: 'vs',
+                inherit: true,
+                rules: [
+                    { token: 'keyword', foreground: '2563eb', fontStyle: 'bold' },
+                    { token: 'type', foreground: '059669' },
+                    { token: 'string', foreground: 'b91c1c' },
+                ],
+                colors: {
+                    'editor.background': '#ffffff',
+                    'editor.lineHighlightBackground': '#f3f4f6',
+                }
+            });
+
+            const editor = monaco.editor.create(document.getElementById('editor-container'), {
+                value: 'CREATE a:VERT {\n\tname: text = "Alice"\n\tage: int32 = 20,\n\tshool: text? = None\n}\nRETURN a',
+                language: langId,
+                theme: isDark ? 'vs-dark' : 'mgql-light',
+                automaticLayout: true, // Helps with basic resize
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                fontSize: 14,
+                fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+                padding: { top: 16 }
+            });
+            globalEditor = editor;
+
+            // Robust resize handling using ResizeObserver on the wrapper
+            const editorWrapper = document.querySelector('.editor-wrapper');
+            const resizeObserver = new ResizeObserver(() => {
+                editor.layout();
+            });
+            resizeObserver.observe(editorWrapper);
+
+            // === API Logic ===
+            const dbInput = document.getElementById('db_name');
+            const syntaxDot = document.getElementById('syntax-dot');
+            const syntaxText = document.getElementById('syntax-text');
+            const resultsContent = document.getElementById('results-content');
+
+            // 1. Debounced Syntax Checking
+            let syntaxTimer;
+            editor.onDidChangeModelContent(() => {
+                clearTimeout(syntaxTimer);
+                syntaxDot.className = 'dot dot-idle';
+                syntaxText.textContent = 'Проверка...';
+                syntaxTimer = setTimeout(checkSyntax, 700);
+            });
+
+            async function checkSyntax() {
+                const query = editor.getValue();
+                if (!query.trim()) {
+                    syntaxDot.className = 'dot dot-idle';
+                    syntaxText.textContent = 'Готов к вводу';
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/syntax', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: query })
+                    });
+
+                    if (response.ok) {
+                        syntaxDot.className = 'dot dot-ok';
+                        syntaxText.textContent = 'Синтаксис Ок';
+                    } else {
+                        syntaxDot.className = 'dot dot-err';
+                        syntaxText.textContent = 'Ошибка синтаксиса';
+                    }
+                } catch (e) {
+                    syntaxDot.className = 'dot dot-idle';
+                    syntaxText.textContent = 'Сервер недоступен (Синтаксис)';
+                }
+            }
+
+            // 2. Query Execution
+            async function executeQuery() {
+                const dbName = dbInput.value.trim();
+                const query = editor.getValue().trim();
+
+                if (!dbName) {
+                    alert("Пожалуйста, укажите имя базы данных");
+                    dbInput.focus();
+                    return;
+                }
+                if (!query) return;
+
+                // Set loading state
+                resultsContent.innerHTML = `
+                    <div class="state-container">
+                        <div class="spinner"></div>
+                        <p>Выполнение запроса...</p>
+                    </div>
+                `;
+
+                try {
+                    const response = await fetch('/query', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ db_name: dbName, query: query })
+                    });
+
+                    if (response.ok) {
+                        // Check if content-length is 0 or try parsing JSON safely
+                        const text = await response.text();
+                        if (!text) {
+                            renderSuccessMessage('Запрос успешно выполнен (Нет возвращаемых данных).');
+                            return;
+                        }
+                        
+                        try {
+                            const data = JSON.parse(text);
+                            renderTable(data);
+                        } catch (e) {
+                            renderSuccessMessage('Запрос успешно выполнен (200 OK).');
+                        }
+                    } else {
+                        let errorMsg = `HTTP Ошибка: ${response.status}`;
+                        try {
+                            const errData = await response.json();
+                            errorMsg = errData.message || JSON.stringify(errData);
+                        } catch(e) {
+                            const errText = await response.text();
+                            if (errText) errorMsg = errText;
+                        }
+                        renderError(errorMsg);
+                    }
+                } catch (e) {
+                    renderError('Не удалось подключиться к серверу. Убедитесь, что бэкенд запущен на localhost:8080.');
+                }
+            }
+
+            // --- Render Helpers ---
+            function renderTable(data) {
+                if (!data || !data.header || !data.body || data.body.length === 0) {
+                    renderSuccessMessage('Запрос выполнен успешно. Таблица пуста.');
+                    return;
+                }
+
+                let html = '<div class="table-container"><table><thead><tr>';
+                data.header.forEach(col => {
+                    // Escape HTML basic
+                    const safeCol = col.toString().replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    html += `<th>${safeCol}</th>`;
+                });
+                html += '</tr></thead><tbody>';
+
+                data.body.forEach(row => {
+                    html += '<tr>';
+                    row.forEach(cell => {
+                        const safeCell = cell !== null ? cell.toString().replace(/</g, "&lt;").replace(/>/g, "&gt;") : '<em>null</em>';
+                        html += `<td>${safeCell}</td>`;
+                    });
+                    html += '</tr>';
+                });
+
+                html += '</tbody></table></div>';
+                resultsContent.innerHTML = html;
+            }
+
+            function renderSuccessMessage(msg) {
+                resultsContent.innerHTML = `
+                    <div class="state-container" style="color: var(--status-ok);">
+                        <div class="state-icon" style="opacity: 1; color: var(--status-ok);">
+                            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <h3>Успешно</h3>
+                        <p style="font-size: 13px;">${msg}</p>
+                    </div>
+                `;
+            }
+
+            function renderError(msg) {
+                resultsContent.innerHTML = `
+                    <div class="state-container" style="color: var(--status-err);">
+                        <div class="state-icon" style="opacity: 1; color: var(--status-err);">
+                            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <h3>Ошибка выполнения</h3>
+                        <p style="font-size: 13px; max-width: 80%; word-break: break-word;">${msg}</p>
+                    </div>
+                `;
+            }
+
+            // === Event Listeners ===
+            document.getElementById('execute-btn').addEventListener('click', executeQuery);
+
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, executeQuery);
+            
+            // Focus editor initially
+            editor.focus();
+        });
+    </script>
+</body>
+</html>
